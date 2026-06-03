@@ -23,20 +23,30 @@ const getInterpolatedValue = (vals, progress) => {
 
 // 3D Scene Manager: Dynamically updates Camera and Avatar based on Scroll progress
 function LandingSceneManager({ scrollProgress, calibrationMode, currentActiveSection, children }) {
-  useFrame((state) => {
+  const smoothScroll = useRef(scrollProgress.current);
+
+  useFrame((state, delta) => {
     const progress = scrollProgress.current;
+
+    // Smooth the scroll progress
+    const speed = 4.5;
+    smoothScroll.current = THREE.MathUtils.lerp(
+      smoothScroll.current,
+      progress,
+      1 - Math.exp(-speed * delta)
+    );
 
     // Freeze camera frame to active section if in placement calibration mode
     const activeProgress = calibrationMode
       ? Math.min(10, Math.max(0, currentActiveSection))
-      : progress;
+      : smoothScroll.current;
 
     // 1. Camera Positions per Section (11 milestones for 11 sections)
     const camX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
     const camY = getInterpolatedValue([0.12, 0.46, -0.15, 0.08, -0.05, 0.06, 0.0, 0.05, -0.05, 0.05, 0.0], activeProgress);
     const camZ = getInterpolatedValue([1.35, 0.65, 1.85, 1.15, 1.50, 1.22, 1.55, 1.40, 1.50, 1.45, 1.60], activeProgress);
 
-    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.08);
+    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
 
     // 2. Camera LookAt targets per Section
     const targetX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
@@ -52,10 +62,21 @@ function LandingSceneManager({ scrollProgress, calibrationMode, currentActiveSec
 // Sub-component to manage Avatar scaling and positional layouts per Section
 function AvatarWrapper({ scrollProgress, modelPath, calibrations, calibrationMode, currentActiveSection, ...props }) {
   const avatarRef = useRef();
+  const smoothScroll = useRef(scrollProgress.current);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!avatarRef.current) return;
-    const progress = scrollProgress.current;
+    const progressVal = scrollProgress.current;
+
+    // Smooth the scroll progress
+    const speed = 4.5;
+    smoothScroll.current = THREE.MathUtils.lerp(
+      smoothScroll.current,
+      progressVal,
+      1 - Math.exp(-speed * delta)
+    );
+
+    const progress = smoothScroll.current;
     const { width: viewportWidth } = state.viewport;
 
     let posX, posY, posZ, rotY, scale;
@@ -78,9 +99,9 @@ function AvatarWrapper({ scrollProgress, modelPath, calibrations, calibrationMod
       scale = getInterpolatedValue(calibrations.map(c => c.scale), progress);
     }
 
-    avatarRef.current.position.lerp(new THREE.Vector3(posX, posY, posZ), 0.08);
-    avatarRef.current.rotation.y = THREE.MathUtils.lerp(avatarRef.current.rotation.y, rotY, 0.08);
-    avatarRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.08);
+    avatarRef.current.position.lerp(new THREE.Vector3(posX, posY, posZ), 0.12);
+    avatarRef.current.rotation.y = THREE.MathUtils.lerp(avatarRef.current.rotation.y, rotY, 0.12);
+    avatarRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.12);
   });
 
   return (
@@ -97,10 +118,21 @@ function FloatingShape({ cfg, mousePos, scrollProgress, onBurst }) {
   const [bursting, setBursting] = useState(false);
   const burstProgress = useRef(0);
   const [sparkles, setSparkles] = useState([]);
+  const smoothScroll = useRef(scrollProgress.current);
 
   useFrame((state, delta) => {
     const elapsed = state.clock.getElapsedTime();
-    const progress = scrollProgress.current;
+    const progressVal = scrollProgress.current;
+
+    // Smooth scroll progress
+    const speed = 4.5;
+    smoothScroll.current = THREE.MathUtils.lerp(
+      smoothScroll.current,
+      progressVal,
+      1 - Math.exp(-speed * delta)
+    );
+
+    const progress = smoothScroll.current;
 
     if (bursting) {
       burstProgress.current += delta;
