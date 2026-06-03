@@ -228,7 +228,7 @@ export function Avatar({
     activeMicroExpression = null, // { type, intensity, duration, timestamp }
     audioChunks = [],
     isListening = false,
-    modelPath = '/model.glb',
+    modelPath = 'model.glb',
     attentionState = null,
     customBlendshapeOverrides = {},
     aslEnabled = false,
@@ -545,22 +545,22 @@ export function Avatar({
 
         // Load requested emotes independently
         const animationsToLoad = [
-            { id: 'hello', url: '/animations/Wave.glb', isLooping: false, mask: 'armsOnly' },
-            { id: 'thumbsUp', url: '/animations/ThumbsUp.glb', isLooping: false, mask: 'armsOnly' },
-            { id: 'thankYou', url: '/animations/ThankYou.glb', isLooping: false, mask: 'armsOnly' },
-            { id: 'clapping', url: '/animations/clapping.glb', isLooping: false, mask: 'armsOnly' },
-            { id: 'shrugging', url: '/animations/shrugging.glb', isLooping: false, mask: 'upperBody' },
-            { id: 'lookingAround', url: '/animations/LookingAround.glb', isLooping: false, mask: 'headOnly' },
-            { id: 'bow', url: '/animations/Quick%20Formal%20Bow.glb', isLooping: false, mask: 'fullBody' },
-            { id: 'fistRaise', url: '/animations/Cheerful%20Fist%20Raise.glb', isLooping: false, mask: 'upperBody' },
-            { id: 'listening', url: '/animations/listening.glb', isLooping: true, mask: 'upperBody' },
-            { id: 'laughing', url: '/animations/Laughing.glb', isLooping: false, mask: 'upperBody' },
-            { id: 'praying', url: '/animations/Praying.glb', isLooping: false, mask: 'upperBody' },
-            { id: 'pickingUp', url: '/animations/Picking%20Up.glb', isLooping: false, mask: 'upperBody' },
-            { id: 'idle_0', url: '/animations/Idle/Looking.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
-            { id: 'idle_1', url: '/animations/Idle/Walk%20In%20Circle.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
-            { id: 'idle_3', url: '/animations/Idle/Look%20Around.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
-            { id: 'idle_4', url: '/animations/Idle/Look%20Around%20(1).glb', isLooping: false, mask: 'fullBodyNoTranslation' }
+            { id: 'hello', url: 'animations/Wave.glb', isLooping: false, mask: 'armsOnly' },
+            { id: 'thumbsUp', url: 'animations/ThumbsUp.glb', isLooping: false, mask: 'armsOnly' },
+            { id: 'thankYou', url: 'animations/ThankYou.glb', isLooping: false, mask: 'armsOnly' },
+            { id: 'clapping', url: 'animations/clapping.glb', isLooping: false, mask: 'armsOnly' },
+            { id: 'shrugging', url: 'animations/shrugging.glb', isLooping: false, mask: 'upperBody' },
+            { id: 'lookingAround', url: 'animations/LookingAround.glb', isLooping: false, mask: 'headOnly' },
+            { id: 'bow', url: 'animations/Quick%20Formal%20Bow.glb', isLooping: false, mask: 'fullBody' },
+            { id: 'fistRaise', url: 'animations/Cheerful%20Fist%20Raise.glb', isLooping: false, mask: 'upperBody' },
+            { id: 'listening', url: 'animations/listening.glb', isLooping: true, mask: 'upperBody' },
+            { id: 'laughing', url: 'animations/Laughing.glb', isLooping: false, mask: 'upperBody' },
+            { id: 'praying', url: 'animations/Praying.glb', isLooping: false, mask: 'upperBody' },
+            { id: 'pickingUp', url: 'animations/Picking%20Up.glb', isLooping: false, mask: 'upperBody' },
+            { id: 'idle_0', url: 'animations/Idle/Looking.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
+            { id: 'idle_1', url: 'animations/Idle/Walk%20In%20Circle.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
+            { id: 'idle_3', url: 'animations/Idle/Look%20Around.glb', isLooping: false, mask: 'fullBodyNoTranslation' },
+            { id: 'idle_4', url: 'animations/Idle/Look%20Around%20(1).glb', isLooping: false, mask: 'fullBodyNoTranslation' }
         ];
 
         Promise.allSettled(animationsToLoad.map(anim => loadAnim(anim.id, anim.url, anim.isLooping, anim.mask))).then(() => {

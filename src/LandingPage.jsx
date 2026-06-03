@@ -551,7 +551,7 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
     const queue = letters.map(letter => ({
       type: 'letter',
       gloss: letter,
-      path: `/animations/asl/letters/${letter.toLowerCase()}.fbx`,
+      path: `animations/asl/letters/${letter.toLowerCase()}.fbx`,
       speed: 1.8
     }));
 
