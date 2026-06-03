@@ -824,6 +824,30 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  /* Firefox Scrollbar Support */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary) rgba(3, 4, 8, 0.5);
+}
+
+/* Chrome/Safari/Edge Scrollbar Styling */
+.calibration-hud::-webkit-scrollbar {
+  width: 6px;
+}
+
+.calibration-hud::-webkit-scrollbar-track {
+  background: rgba(3, 4, 8, 0.5);
+  border-radius: 9px;
+}
+
+.calibration-hud::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 9px;
+}
+
+.calibration-hud::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-text);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .calibration-hud h3 {

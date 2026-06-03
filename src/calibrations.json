@@ -1,0 +1,13 @@
+[
+  { "posXPercent": 0.33, "posY": 0.08, "posZ": 0.08, "rotY": -0.28, "scale": 0.82 },
+  { "posXPercent": -0.19, "posY": 0.39, "posZ": 0.0, "rotY": 0.64, "scale": 0.68 },
+  { "posXPercent": 0.31, "posY": -0.14, "posZ": 0.18, "rotY": -0.46, "scale": 0.98 },
+  { "posXPercent": -0.3, "posY": 0.02, "posZ": 0.0, "rotY": 0.4, "scale": 0.9 },
+  { "posXPercent": 0.33, "posY": -0.05, "posZ": 0.0, "rotY": -0.4, "scale": 0.85 },
+  { "posXPercent": -0.31, "posY": 0.01, "posZ": 0.0, "rotY": 0.64, "scale": 0.84 },
+  { "posXPercent": 0.0, "posY": 0.05, "posZ": 0.0, "rotY": 0.0, "scale": 0.88 },
+  { "posXPercent": 0.15, "posY": -0.02, "posZ": 0.0, "rotY": -0.46, "scale": 0.94 },
+  { "posXPercent": -0.15, "posY": -0.08, "posZ": 0.06, "rotY": 0.42, "scale": 0.82 },
+  { "posXPercent": 0.28, "posY": 0.05, "posZ": 0.08, "rotY": -0.35, "scale": 0.88 },
+  { "posXPercent": 0.0, "posY": 0.02, "posZ": 0.0, "rotY": 0.0, "scale": 0.88 }
+]

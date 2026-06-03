@@ -4,6 +4,7 @@ import { Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { Avatar } from './Avatar';
 import './LandingPage.css';
+import defaultCalibrations from './calibrations.json';
 
 // Base64 silent 2-second WAV file to drive the HTML5 Audio element for mock lip-sync
 const SILENT_WAV = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA";
@@ -329,19 +330,6 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
 
   // Live 3D Placement Calibration States (11 milestones for 11 sections)
   const LOCAL_STORAGE_KEY = 'facial_expressions_landing_calibrations_v2';
-  const defaultCalibrations = [
-    { posXPercent: 0.33, posY: 0.08, posZ: 0.08, rotY: -0.28, scale: 0.82 }, // Section 0: Hero
-    { posXPercent: -0.19, posY: 0.39, posZ: 0.0, rotY: 0.64, scale: 0.68 },  // Section 1: Expressions
-    { posXPercent: 0.31, posY: -0.14, posZ: 0.18, rotY: -0.46, scale: 0.98 }, // Section 2: Rigging
-    { posXPercent: -0.3, posY: 0.02, posZ: 0.0, rotY: 0.4, scale: 0.9 },    // Section 3: Chat
-    { posXPercent: 0.33, posY: -0.05, posZ: 0.0, rotY: -0.4, scale: 0.85 },  // Section 4: Telemetry
-    { posXPercent: -0.31, posY: 0.01, posZ: 0.0, rotY: 0.64, scale: 0.84 },   // Section 5: Crowd Scan
-    { posXPercent: 0.0, posY: 0.05, posZ: 0.0, rotY: 0.0, scale: 0.88 },    // Section 6: Demos
-    { posXPercent: 0.15, posY: -0.02, posZ: 0.0, rotY: -0.46, scale: 0.94 },  // Section 7: QR Code Section
-    { posXPercent: -0.15, posY: -0.08, posZ: 0.06, rotY: 0.42, scale: 0.82 }, // Section 8: Meet the Team
-    { posXPercent: 0.28, posY: 0.05, posZ: 0.08, rotY: -0.35, scale: 0.88 }, // Section 9: FAQ Section (Avatar on the right)
-    { posXPercent: 0.0, posY: 0.02, posZ: 0.0, rotY: 0.0, scale: 0.88 }     // Section 10: Join Community
-  ];
 
   const [calibrations, setCalibrations] = useState(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -394,6 +382,18 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
       setSaveStatus('Reset Completed! 🔄');
       setTimeout(() => setSaveStatus(''), 3000);
     }
+  };
+
+  const handleDownloadCalibrationsJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(calibrations, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "calibrations.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    setSaveStatus('JSON File Downloaded! 📥');
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   // Interactive Section States
@@ -1416,20 +1416,29 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', margin: '8px 0' }}>
+          <div style={{ display: 'flex', gap: '8px', margin: '8px 0', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleSaveCalibrations}
+                className="landing-btn primary"
+                style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem', borderRadius: '10px' }}
+              >
+                💾 Save Local
+              </button>
+              <button
+                onClick={handleResetCalibrations}
+                className="landing-btn outline"
+                style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem', borderRadius: '10px' }}
+              >
+                🔄 Reset Defaults
+              </button>
+            </div>
             <button
-              onClick={handleSaveCalibrations}
-              className="landing-btn primary"
-              style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem', borderRadius: '10px' }}
-            >
-              💾 Save persistent
-            </button>
-            <button
-              onClick={handleResetCalibrations}
+              onClick={handleDownloadCalibrationsJSON}
               className="landing-btn outline"
-              style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem', borderRadius: '10px' }}
+              style={{ fontSize: '0.78rem', padding: '0.5rem', borderRadius: '10px', width: '100%', borderColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
             >
-              🔄 Reset defaults
+              📥 Download calibrations.json
             </button>
           </div>
 
