@@ -19,6 +19,30 @@
   --font-display: 'Syne', 'Outfit', sans-serif;
 }
 
+/* Custom Scrollbars matching the premium HMI theme (Main Window and Root Container) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030408;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent-primary), rgba(0, 240, 255, 0.4));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--accent-text), rgba(0, 240, 255, 0.7));
+}
+
+html, body, .landing-page-root {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary) #030408;
+}
+
 /* Base resets for snap scrolling */
 .landing-page-root {
   background-color: var(--bg-primary);
