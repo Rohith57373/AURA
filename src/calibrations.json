@@ -3,28 +3,28 @@
     "posXPercent": 0.33,
     "posY": 0.08,
     "posZ": 0.08,
-    "rotY": -0.42,
+    "rotY": -0.28,
     "scale": 0.82
   },
   {
-    "posXPercent": -0.28,
+    "posXPercent": -0.29,
     "posY": 0.39,
     "posZ": 0,
     "rotY": 0.64,
     "scale": 0.68
   },
   {
-    "posXPercent": 0.21,
+    "posXPercent": 0.31,
     "posY": -0.14,
     "posZ": 0.18,
     "rotY": -0.46,
     "scale": 0.98
   },
   {
-    "posXPercent": -0.3,
+    "posXPercent": -0.43,
     "posY": 0.02,
     "posZ": 0,
-    "rotY": 0.4,
+    "rotY": 0.56,
     "scale": 0.9
   },
   {
@@ -42,30 +42,30 @@
     "scale": 0.84
   },
   {
-    "posXPercent": 0.21,
+    "posXPercent": 0.26,
     "posY": 0.05,
     "posZ": 0,
     "rotY": -0.52,
     "scale": 0.88
   },
   {
-    "posXPercent": -0.07,
-    "posY": -0.02,
+    "posXPercent": -0.36,
+    "posY": -0.01,
     "posZ": 0,
-    "rotY": -0.08,
+    "rotY": 0.54,
     "scale": 0.94
   },
   {
-    "posXPercent": 0.08,
+    "posXPercent": 0.09,
     "posY": -0.08,
     "posZ": 0.06,
-    "rotY": -0.06,
+    "rotY": 0.02,
     "scale": 0.82
   },
   {
-    "posXPercent": 0.25,
-    "posY": 0.08,
-    "posZ": 0.18,
+    "posXPercent": 0.24,
+    "posY": 0.05,
+    "posZ": 0.08,
     "rotY": -0.82,
     "scale": 0.88
   },

@@ -37,22 +37,29 @@ function LandingSceneManager({ scrollProgress, calibrationMode, currentActiveSec
     );
 
     // Freeze camera frame to active section if in placement calibration mode
-    const activeProgress = calibrationMode
-      ? Math.min(10, Math.max(0, currentActiveSection))
-      : smoothScroll.current;
+    // On mobile/tablet, freeze at index 0 (Hero view) to keep it static
+    const activeProgress = window.innerWidth < 1024
+      ? 0
+      : (calibrationMode
+          ? Math.min(10, Math.max(0, currentActiveSection))
+          : smoothScroll.current);
 
     // 1. Camera Positions per Section (11 milestones for 11 sections)
-    const camX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
+    let camX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
     const camY = getInterpolatedValue([0.12, 0.46, -0.15, 0.08, -0.05, 0.06, 0.0, 0.05, -0.05, 0.05, 0.0], activeProgress);
     const camZ = getInterpolatedValue([1.35, 0.65, 1.85, 1.15, 1.50, 1.22, 1.55, 1.40, 1.50, 1.45, 1.60], activeProgress);
 
-    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
-
     // 2. Camera LookAt targets per Section
-    const targetX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
+    let targetX = getInterpolatedValue([0.28, -0.15, 0.12, -0.28, 0.28, -0.24, 0.0, -0.22, 0.22, -0.20, 0.0], activeProgress);
     const targetY = getInterpolatedValue([0.06, 0.46, -0.15, 0.08, -0.05, 0.06, 0.0, 0.05, -0.05, 0.05, 0.0], activeProgress);
     const targetZ = getInterpolatedValue([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], activeProgress);
 
+    if (window.innerWidth < 1024) {
+      camX = 0;
+      targetX = 0;
+    }
+
+    state.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
     state.camera.lookAt(new THREE.Vector3(targetX, targetY, targetZ));
   });
 
@@ -80,8 +87,11 @@ function AvatarWrapper({ scrollProgress, modelPath, calibrations, calibrationMod
     const { width: viewportWidth } = state.viewport;
 
     let posX, posY, posZ, rotY, scale;
+    
+    // If on mobile/tablet, freeze spline coordinate extraction at index 0 (Hero view) to keep it static
+    const activeProgressVal = window.innerWidth < 1024 ? 0 : progress;
 
-    if (calibrationMode) {
+    if (calibrationMode && window.innerWidth >= 1024) {
       // Direct real-time mapping to calibrated values of active section
       const activeSec = Math.min(10, Math.max(0, currentActiveSection));
       const config = calibrations[activeSec];
@@ -92,11 +102,28 @@ function AvatarWrapper({ scrollProgress, modelPath, calibrations, calibrationMod
       scale = config.scale;
     } else {
       // Dynamic scroll spline interpolation using calibration array milestones
-      posX = getInterpolatedValue(calibrations.map(c => viewportWidth * c.posXPercent), progress);
-      posY = getInterpolatedValue(calibrations.map(c => c.posY), progress);
-      posZ = getInterpolatedValue(calibrations.map(c => c.posZ), progress);
-      rotY = getInterpolatedValue(calibrations.map(c => c.rotY), progress);
-      scale = getInterpolatedValue(calibrations.map(c => c.scale), progress);
+      posX = getInterpolatedValue(calibrations.map(c => viewportWidth * c.posXPercent), activeProgressVal);
+      posY = getInterpolatedValue(calibrations.map(c => c.posY), activeProgressVal);
+      posZ = getInterpolatedValue(calibrations.map(c => c.posZ), activeProgressVal);
+      rotY = getInterpolatedValue(calibrations.map(c => c.rotY), activeProgressVal);
+      scale = getInterpolatedValue(calibrations.map(c => c.scale), activeProgressVal);
+    }
+
+    // Responsive position and scale adjustments for tablets & mobile phones
+    if (window.innerWidth < 1024) {
+      posX = 0; // Keep avatar always centered
+      rotY = 0; // Force avatar to face straight forward towards the user front
+      
+      const isMobile = window.innerWidth < 768;
+      const isShortMobile = isMobile && window.innerHeight < 700;
+      
+      // Scale down avatar so it fits the smaller aspect ratio screen
+      const scaleMultiplier = isMobile ? (isShortMobile ? 0.45 : 0.55) : 0.72;
+      scale = scale * scaleMultiplier;
+
+      // Adjust height offset so avatar head remains visible and framed nicely
+      const posYOffset = isMobile ? -0.15 : -0.05;
+      posY = posY + posYOffset;
     }
 
     avatarRef.current.position.lerp(new THREE.Vector3(posX, posY, posZ), 0.12);
@@ -311,49 +338,177 @@ function FloatingBackgroundShapes({ scrollProgress, mousePos }) {
   ]);
 
   const handleBurstShape = (id) => {
-    const shapeTypes = ['torusKnot', 'sphere', 'box', 'torus'];
-    const colors = ['#8f94fb', '#34d399', '#ff007f', '#00f0ff', '#fbbf24', '#a78bfa'];
-    
-    const randomType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    const side = Math.random() > 0.5 ? 1 : -1;
-    const randomX = (0.55 + Math.random() * 0.35) * side; 
-    const randomY = -0.55 + Math.random() * 1.1; 
-    const randomScale = 0.06 + Math.random() * 0.08;
+  const shapeTypes = ['torusKnot', 'sphere', 'box', 'torus'];
+  const colors = ['#8f94fb', '#34d399', '#ff007f', '#00f0ff', '#fbbf24', '#a78bfa'];
+  
+  const randomType = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
+  const randomColor = colors[Math.floor(Math.random() * colors.length)];
+  
+  const side = Math.random() > 0.5 ? 1 : -1;
+  const randomX = (0.55 + Math.random() * 0.35) * side; 
+  const randomY = -0.55 + Math.random() * 1.1; 
+  const randomScale = 0.06 + Math.random() * 0.08;
 
-    document.body.style.cursor = 'default';
+  document.body.style.cursor = 'default';
 
-    setShapes(prev => prev.map(s => {
-      if (s.id === id) {
-        return {
-          id: Date.now() + Math.random(),
-          type: randomType,
-          scale: randomScale,
-          baseX: randomX,
-          baseY: randomY,
-          baseZ: -0.4 - Math.random() * 0.4,
-          color: randomColor
-        };
-      }
-      return s;
-    }));
-  };
+  setShapes(prev => prev.map(s => {
+    if (s.id === id) {
+      return {
+        id: Date.now() + Math.random(),
+        type: randomType,
+        scale: randomScale,
+        baseX: randomX,
+        baseY: randomY,
+        baseZ: -0.4 - Math.random() * 0.4,
+        color: randomColor
+      };
+    }
+    return s;
+  }));
+};
 
-  return (
-    <group>
-      {shapes.map(cfg => (
-        <FloatingShape
-          key={cfg.id}
-          cfg={cfg}
-          mousePos={mousePos}
-          scrollProgress={scrollProgress}
-          onBurst={handleBurstShape}
-        />
-      ))}
-    </group>
-  );
+return (
+  <group>
+    {shapes.map(cfg => (
+      <FloatingShape
+        key={cfg.id}
+        cfg={cfg}
+        mousePos={mousePos}
+        scrollProgress={scrollProgress}
+        onBurst={handleBurstShape}
+      />
+    ))}
+  </group>
+);
 }
+
+// Data powering the interactive Emotion Engine product demo showcase
+const emotionDemoData = [
+{
+  id: 'happy',
+  name: 'Happy',
+  features: 'Mouth corners raised, cheek puff, brow raised',
+  subsystem: 'Emotion Engine',
+  latency: '24ms',
+  capability: 'Real-Time Expression Rendering'
+},
+{
+  id: 'excited',
+  name: 'Excited',
+  features: 'Wide smile, open jaw, elevated eyes, inner brows raised',
+  subsystem: 'Sentiment Detection',
+  latency: '28ms',
+  capability: 'Emotion Mapping'
+},
+{
+  id: 'surprised',
+  name: 'Surprised',
+  features: 'Inner brows raised, eyes wide, jaw drop',
+  subsystem: 'Affective System',
+  latency: '20ms',
+  capability: 'Blendshape Generation'
+},
+{
+  id: 'thinking',
+  name: 'Thinking',
+  features: 'Brows knitted, eye squint, mouth dimples compressed',
+  subsystem: 'Cognitive Parser',
+  latency: '32ms',
+  capability: 'Real-Time Expression Rendering'
+},
+{
+  id: 'confused',
+  name: 'Confused',
+  features: 'Asymmetric brows, eye squint, slight mouth frown',
+  subsystem: 'Sentiment Parsing',
+  latency: '26ms',
+  capability: 'Emotion Mapping'
+},
+{
+  id: 'sad',
+  name: 'Sad',
+  features: 'Inner brows raised, lips puckered, eyes slightly blinked',
+  subsystem: 'Emotion Engine',
+  latency: '25ms',
+  capability: 'Real-Time Expression Rendering'
+},
+{
+  id: 'angry',
+  name: 'Angry',
+  features: 'Brows down & in, eyes wide, mouth compressed',
+  subsystem: 'Affective System',
+  latency: '22ms',
+  capability: 'Blendshape Generation'
+},
+{
+  id: 'neutral',
+  name: 'Neutral',
+  features: 'Baseline resting posture, calm eyes, relaxed jaw',
+  subsystem: 'Resting State',
+  latency: '12ms',
+  capability: 'Real-Time Expression Rendering'
+}
+];
+
+// Data powering the interactive Gesture System product demo showcase
+const gestureDemoData = [
+{
+  id: 'hello',
+  title: 'Greeting',
+  desc: 'Creates a welcoming first impression.',
+  subsystem: 'Gesture Engine',
+  latency: '18ms',
+  asset: 'Wave.glb'
+},
+{
+  id: 'thumbsUp',
+  title: 'Thumbs Up',
+  desc: 'Signals alignment and positive reinforcement.',
+  subsystem: 'Gesture Engine',
+  latency: '16ms',
+  asset: 'ThumbsUp.glb'
+},
+{
+  id: 'nodding',
+  title: 'Nodding',
+  desc: 'Signals understanding and active listening.',
+  subsystem: 'Kinetic Motor Engine',
+  latency: '22ms',
+  asset: 'Procedural Nod'
+},
+{
+  id: 'shrugging',
+  title: 'Shrugging',
+  desc: 'Expresses uncertainty or cognitive load naturally.',
+  subsystem: 'Gesture Engine',
+  latency: '24ms',
+  asset: 'shrugging.glb'
+},
+{
+  id: 'lookingAround',
+  title: 'Looking Around',
+  desc: 'Demonstrates environmental scanning and spatial attention.',
+  subsystem: 'Spatial Steering Engine',
+  latency: '20ms',
+  asset: 'LookingAround.glb'
+},
+{
+  id: 'clapping',
+  title: 'Clapping',
+  desc: 'Provides celebratory or appreciative feedback.',
+  subsystem: 'Gesture Engine',
+  latency: '28ms',
+  asset: 'clapping.glb'
+},
+{
+  id: 'listening',
+  title: 'Listening Pose',
+  desc: 'Indicates focused attention on user query input.',
+  subsystem: 'Attention Engine',
+  latency: '15ms',
+  asset: 'listening.glb'
+}
+];
 
 export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
   const [scrollState, setScrollState] = useState(0);
@@ -734,7 +889,7 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
     if (aslEnabled) {
       setTimeout(() => {
         setIsThinking(false);
-        setChatMessages((prev) => [...prev, { sender: 'assistant', text: `Translating query to ASL queue: "${userText}"` }]);
+        setChatMessages((prev) => [...prev, { sender: 'assistant', text: `Translating query to sign language queue: "${userText}"` }]);
         triggerAslSpelling(userText);
       }, 1000);
       return;
@@ -922,22 +1077,7 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
 
       <nav className="landing-nav">
         <div className="landing-nav-logo">
-          🚀 <span>HMI ENGINE</span>
-        </div>
-        <div className="landing-nav-links">
-          <button
-            className={`nav-glow-btn ${calibrationMode ? 'primary' : ''}`}
-            onClick={() => setCalibrationMode(!calibrationMode)}
-            style={{
-              borderColor: calibrationMode ? 'var(--accent-primary)' : 'var(--border-glass)',
-              boxShadow: calibrationMode ? '0 0 12px var(--accent-glow)' : 'none'
-            }}
-          >
-            🛠️ Placement HUD: {calibrationMode ? 'ON' : 'OFF'}
-          </button>
-          <button className="nav-glow-btn primary" onClick={() => navigateTo('main')}>
-            Launch App
-          </button>
+          ⚡ <span>AURA // HMI FRAMEWORK</span>
         </div>
       </nav>
 
@@ -946,20 +1086,20 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
         {/* SECTION 0: HERO VIEW */}
         <section className="landing-section">
           <div className="section-content">
-            <span className="hero-tagline">Interaction Engine v2.0</span>
+            <span className="hero-tagline">THE HUMAN–MACHINE INTERACTION FRAMEWORK</span>
             <h1 className="landing-heading">
-              Human-Centric AI Avatars <br />
-              <span className="text-gradient-indigo">for Natural Interaction</span>
+              AI that doesn't just answer — <br />
+              <span className="text-gradient-indigo">it interacts.</span>
             </h1>
             <p className="landing-desc">
-              Human communication relies on expressions, gestures, eye contact, speech, and context. Traditional interfaces often ignore these signals. Our Human-Machine Interaction platform bridges this gap.
+              AURA bridges the gap between static language models and embodied human presence. Empower digital avatars with low-latency vision, speech synthesis, emotional reasoning, and social awareness in real time.
             </p>
             <div className="landing-action-row">
               <button className="landing-btn primary" onClick={triggerHello}>
-                👋 Say Hello
+                👋 Test Live Greeting
               </button>
               <button className="landing-btn outline" onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}>
-                Explore Research ↓
+                Explore Capabilities ↓
               </button>
             </div>
           </div>
@@ -972,123 +1112,103 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
           </div>
         </section>
 
-        {/* SECTION 1: THE FUTURE OF HMI */}
+        {/* SECTION 1: THE FUTURE OF HMI (PROBLEM & VISION) */}
         <section className="landing-section">
           <div className="section-content right-align">
-            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>Sensory Synthesis</span>
-            <h2 className="landing-subheading text-gradient-emerald">Reimagining the Human-Machine Interface</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>THE HMI VISION</span>
+            <h2 className="landing-subheading text-gradient-emerald">The Embodiment Gap: Bringing Human Presence to Digital Intelligence</h2>
             <p className="landing-desc">
-              We believe the next era of computing won't be defined by keyboards or command lines, but by natural, face-to-face interaction. Our HMI platform integrates visual and auditory sensory loops to enable machines to understand and express subtle human cues.
+              While today's generative models possess advanced reasoning capabilities, they remain bottlenecked by flat screens and silent text feeds. This physical detachment strips away the rich, non-verbal signals—micro-expressions, gaze alignment, and physical postures—that build rapport and trust in everyday human communication.
             </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', padding: '1.2rem', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#9ca3af' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)' }}></div>
-                <span>Real-Time Interaction Flow</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '0.78rem', marginTop: '5px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>Human Cue</div>
-                <span style={{ opacity: 0.3 }}>→</span>
-                <div style={{ background: 'rgba(143, 148, 251, 0.08)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-active)' }}>Affective Parser</div>
-                <span style={{ opacity: 0.3 }}>→</span>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>Avatar Response</div>
-              </div>
-            </div>
+            <p className="landing-desc">
+              Our vision is to build the missing interaction layer. AURA serves as the sensory-motor framework that equips cognitive engines with a responsive digital body. By translating digital reasoning into low-latency face blendshapes, natural body gestures, and spatial awareness, AURA transforms static machine outputs into empathetic, face-to-face interactions.
+            </p>
           </div>
         </section>
 
-        {/* SECTION 2: AFFECTIVE ENGINE (EXPRESSIONS & EMOTIONS) */}
+        {/* SECTION 2: THE EMOTION ENGINE */}
         <section className="landing-section">
           <div className="section-content">
-            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>Blendshape Morphing</span>
-            <h2 className="landing-subheading text-gradient-magenta">Expressive Morphing Array</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>AFFECTIVE RIGGING</span>
+            <h2 className="landing-subheading text-gradient-magenta">Digital Humans That Express, Not Just Respond</h2>
             <p className="landing-desc">
-              Our Affective Engine maps verbal sentiment and lexical tone to over 50 fine-grained facial blendshapes. Hover over the emotions below to trigger micro-expressions on the avatar in real-time.
+              Trust is built on recognition. AURA's core Emotion Engine parses sentiment and lexical tone to drive over 50 fine-grained facial micro-expressions. Hover or click an emotion card below to see blendshapes morph in real-time.
             </p>
 
             <div className="emotion-card-grid">
-              {['happy', 'excited', 'surprised', 'sad', 'angry', 'thinking', 'confused', 'neutral'].map(emo => (
+              {emotionDemoData.map(emo => (
                 <div
-                  key={emo}
-                  className={`emotion-card ${activeEmotion === emo ? 'active' : ''}`}
-                  onMouseEnter={() => setActiveEmotion(emo)}
+                  key={emo.id}
+                  className={`emotion-card ${activeEmotion === emo.id ? 'active' : ''}`}
+                  onMouseEnter={() => setActiveEmotion(emo.id)}
                   onMouseLeave={() => setActiveEmotion('neutral')}
+                  onClick={() => setActiveEmotion(emo.id)}
                 >
-                  {emo.charAt(0).toUpperCase() + emo.slice(1)}
+                  <div className="card-header-row">
+                    <span className="card-title-text">{emo.name}</span>
+                    <span className="card-badge">{emo.capability}</span>
+                  </div>
+                  <p className="card-features-desc">{emo.features}</p>
+                  <div className="card-meta-row">
+                    <span className="card-meta-subsystem">{emo.subsystem}</span>
+                    <span className="card-meta-separator">•</span>
+                    <span className="card-meta-latency">{emo.latency}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* SECTION 3: KINETIC SKELETON RIGGING (GESTURES) */}
+        {/* SECTION 3: CORE CAPABILITIES (GESTURES & BODY LANGUAGE) */}
         <section className="landing-section">
           <div className="section-content right-align">
-            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>Kinetic Telemetry</span>
-            <h2 className="landing-subheading text-gradient-cyan">Kinetic Body Language</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>KINETIC SYNTHESIS</span>
+            <h2 className="landing-subheading text-gradient-cyan">Kinetic Body Language & Non-Verbal Alignment</h2>
             <p className="landing-desc">
-              Communication extends beyond the face. The platform synthesizes natural skeletal gestures dynamically based on speech intent. Click the cards below to trigger upper-body motor functions.
+              Communication extends beyond the face. AURA manages a fully rigged skeletal posture system with autonomous life movements (breathing, micro-blinks) and context-aware upper-body motor controls. Click a gesture below to trigger skeletal blending.
             </p>
 
             <div className="gesture-card-grid">
-              {[
-                { id: 'hello', title: 'Greeting', desc: 'A polite friendly wave.' },
-                { id: 'thumbsUp', title: 'Thumbs Up', desc: 'Positive feedback acknowledgement.' },
-                { id: 'clapping', title: 'Clapping', desc: 'Appreciative feedback gesture.' },
-                { id: 'shrugging', title: 'Shrug', desc: 'Expressing uncertainty or thought.' },
-                { id: 'fistRaise', title: 'Cheer', desc: 'Energetic success animation.' },
-                { id: 'bow', title: 'Formal Bow', desc: 'Respectful greeting or gratitude.' },
-                { id: 'thankYou', title: 'Thank You', desc: 'A warm gesture of appreciation.' }
-              ].map(gest => (
+              {gestureDemoData.map(gest => (
                 <div
                   key={gest.id}
                   className={`gesture-card ${currentGesture === gest.id ? 'active' : ''}`}
                   onClick={() => setCurrentGesture(currentGesture === gest.id ? 'none' : gest.id)}
                 >
-                  <span className="gesture-card-title">{gest.title}</span>
-                  <span className="gesture-card-desc">{gest.desc}</span>
+                  <div className="card-header-row">
+                    <span className="gesture-card-title">{gest.title}</span>
+                    <span className="card-badge">{gest.asset}</span>
+                  </div>
+                  <p className="gesture-card-desc">{gest.desc}</p>
+                  <div className="card-meta-row">
+                    <span className="card-meta-subsystem">{gest.subsystem}</span>
+                    <span className="card-meta-separator">•</span>
+                    <span className="card-meta-latency">{gest.latency}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* SECTION 4: CONVERSATIONAL LOOP (SPEECH & LIP SYNC) */}
+        {/* SECTION 4: HOW IT WORKS (SPEECH & LIP SYNC) */}
         <section className="landing-section">
           <div className="section-content">
-            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>Vocal Orchestration</span>
-            <h2 className="landing-subheading text-gradient-violet">Sub-Second Conversational Loop</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>VOCAL CO-SCHEDULING</span>
+            <h2 className="landing-subheading text-gradient-violet">Sub-Second Sensory Alignment: Synthesizing Vocal and Viseme Pipelines</h2>
             <p className="landing-desc">
-              A conversation is a living, bi-directional stream. Our pipeline features low-latency voice activity detection (VAD), speech-to-text, LLM inference, and synchronous viseme synthesis.
+              A conversation is a living, bi-directional stream. Traditional AI systems trigger speech-to-text, LLM reasoning, text-to-speech, and graphic rendering in sequential, isolated phases—causing noticeable delays that break conversational flow.
+            </p>
+            <p className="landing-desc">
+              AURA eliminates this delay through a unified co-scheduling pipeline. By streaming language model responses token-by-token directly into our viseme synthesizer, the avatar begins speaking and animating its lips synchronously within milliseconds of user speech completion, achieving sub-second vocal alignment.
             </p>
 
-            <div className="glass-hud-panel" style={{ gap: '1rem' }}>
-              <div className="speaking-indicator">
-                <div className="speaking-indicator-dot"></div>
-                <span>Conversational Agent Active</span>
-              </div>
-              <div className="waveform-container active">
-                {Array.from({ length: 18 }).map((_, i) => (
-                  <div key={i} className="waveform-bar" style={{ height: `${20 + Math.sin(i * 0.5) * 60}%` }}></div>
+            <div className="glass-hud-panel" style={{ gap: '1rem', padding: '1.5rem' }}>
+              <div className="waveform-container active" style={{ height: '60px' }}>
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <div key={i} className="waveform-bar" style={{ height: `${20 + Math.sin(i * 0.5) * 60}%`, width: '4px', background: 'var(--accent-primary)' }}></div>
                 ))}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', color: '#9ca3af' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                  <span>Voice Activity Detection (VAD)</span>
-                  <span style={{ color: 'var(--accent-green)' }}>12ms</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                  <span>Speech-to-Text (Whisper API)</span>
-                  <span style={{ color: 'var(--accent-green)' }}>180ms</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                  <span>Language Model Inference</span>
-                  <span style={{ color: 'var(--accent-green)' }}>450ms</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Viseme & Audio Synthesizer</span>
-                  <span style={{ color: 'var(--accent-green)' }}>210ms</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1097,130 +1217,63 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
         {/* SECTION 5: GAZE AWARENESS & SPATIAL ATTENTION */}
         <section className="landing-section">
           <div className="section-content right-align">
-            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>Spatial Steering</span>
-            <h2 className="landing-subheading text-gradient-indigo">Spatial Gaze Tracking</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>SPATIAL STEERING</span>
+            <h2 className="landing-subheading text-gradient-indigo">Spatial Intelligence: Procedural Attention and Dynamic Eye Contact</h2>
             <p className="landing-desc">
-              Intelligent systems should know where you are looking. Our spatial attention engine tracks mouse coordinates to steer the avatar's eye line, establishing real-time eye contact. Move your mouse across this section to test it.
+              Natural interaction is situated in space. Today's digital interfaces are physically detached—their avatars stare blindly forward, oblivious to where the speaker is standing. This lack of spatial alignment strips away the subtle eye contact, focus shifts, and head cues that build rapport in human relationships, creating a lifeless communication void.
             </p>
-
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '16px', padding: '1.2rem', fontSize: '0.8rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}>
-                <span>Tracking Coordinates</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>ACTIVE</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontFamily: 'monospace', color: 'var(--accent-text)' }}>
-                <div>Yaw Offset: {(-mousePos.x * 0.5).toFixed(3)} rad</div>
-                <div>Pitch Offset: {(mousePos.y * 0.5).toFixed(3)} rad</div>
-                <div>Cursor X: {mousePos.x.toFixed(3)}</div>
-                <div>Cursor Y: {mousePos.y.toFixed(3)}</div>
-              </div>
-            </div>
+            <p className="landing-desc">
+              Our vision is to ground digital agents in the physical environment. AURA achieves this through a real-time, procedural spatial attention engine. By translating user positioning into coordinated look-at vectors, AURA steers the avatar's eye line and head tilt. This dynamic feedback loop simulates the mechanics of human eye contact—incorporating natural saccadic micro-movements and active listener responses—to turn screens into authentic face-to-face engagements.
+            </p>
           </div>
         </section>
 
         {/* SECTION 6: ACCESSIBILITY & SIGN LANGUAGE */}
         <section className="landing-section">
           <div className="section-content">
-            <span className="hero-tagline">Democratizing Interaction</span>
-            <h2 className="landing-subheading text-gradient-emerald">Accessibility Through Sign Language</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>INCLUSIVE DESIGN</span>
+            <h2 className="landing-subheading text-gradient-emerald">Accessibility Through Sign Language Translation</h2>
             <p className="landing-desc">
-              To truly democratize interaction, digital humans must be accessible to everyone. Our platform translates written or spoken text into real-time American Sign Language (ASL) fingerspelling. Click below to watch the avatar spell words.
+              To break down communication barriers, AURA translates speech and text into real-time sign language fingerspelling. By integrating specialized accessibility layers, the framework maps linguistic tokens directly to rigged hand gestures and finger coordinates.
             </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button className="asl-btn" onClick={() => triggerAslSpelling('HMI')}>Spell "HMI"</button>
-                <button className="asl-btn" onClick={() => triggerAslSpelling('HELLO')}>Spell "HELLO"</button>
-                <button className="asl-btn" onClick={() => triggerAslSpelling('WELCOME')}>Spell "WELCOME"</button>
-                <button className="asl-btn" onClick={() => triggerAslSpelling('')} style={{ color: 'var(--accent-text)', borderColor: 'var(--border-active)' }}>Clear Queue</button>
-              </div>
-              {aslStatus && (
-                <div style={{ background: 'rgba(143, 148, 251, 0.05)', border: '1px solid var(--border-active)', padding: '10px 16px', borderRadius: '12px', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#fff', fontWeight: 600 }}>{aslStatus}</span>
-                  <span style={{ color: '#888', fontSize: '0.75rem' }}>Playing ASL FBX sequence</span>
-                </div>
-              )}
-            </div>
+            <p className="landing-desc">
+              This enables digital avatars to act as inclusive interfaces in public kiosks, educational environments, and customer assistance desks, delivering expressive and accessible communication options for deaf and hard-of-hearing users worldwide.
+            </p>
           </div>
         </section>
 
-        {/* SECTION 7: INTERACTIVE DEMONSTRATION PLAYGROUND */}
+        {/* SECTION 7: CONVERSATIONAL PIPELINE ORCHESTRATION */}
         <section className="landing-section">
           <div className="section-content right-align">
-            <span className="hero-tagline">Platform Sandbox</span>
-            <h2 className="landing-subheading text-gradient-magenta">Unified HMI Playground</h2>
+            <span className="hero-tagline" style={{ color: 'var(--accent-primary)' }}>CONVERSATIONAL ORCHESTRATION</span>
+            <h2 className="landing-subheading text-gradient-magenta">Conversational Pipeline: Unified Multimodal Orchestration</h2>
             <p className="landing-desc">
-              Converse with the avatar, toggle sign language mode, and review the live blendshape logs in our unified sandbox console.
+              AURA's unified conversational pipeline coordinates speech activity detection, large language reasoning, and viseme generation into a single, low-latency execution loop. Rather than processing text, audio, and graphics in isolated sequence, the pipeline streams generative text directly into the expression and gesture controllers.
             </p>
-
-            <div className="glass-hud-panel" style={{ width: '100%', padding: '1.8rem', gap: '1.2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-                <span style={{ fontWeight: 600 }}>Interactive Console</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: aslEnabled ? 'var(--accent-green)' : '#888' }}>
-                    <input type="checkbox" checked={aslEnabled} onChange={() => setAslEnabled(!aslEnabled)} style={{ accentColor: 'var(--accent-green)' }} />
-                    <span>ASL Mode</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="chat-container">
-                <div className="chat-log" style={{ minHeight: '140px', maxHeight: '180px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`chat-bubble ${msg.sender}`} style={{ padding: '8px 12px', fontSize: '0.85rem', width: 'fit-content' }}>
-                      <div>{msg.text}</div>
-                      {msg.gesture && msg.gesture !== 'none' && (
-                        <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: '3px' }}>[Gesture: {msg.gesture}]</div>
-                      )}
-                    </div>
-                  ))}
-                  {isThinking && (
-                    <div className="chat-bubble assistant" style={{ fontStyle: 'italic', opacity: 0.5, padding: '8px 12px', fontSize: '0.8rem' }}>
-                      Synthesizing response...
-                    </div>
-                  )}
-                </div>
-
-                <form onSubmit={handleChatSubmit} className="chat-input-row" style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={aslEnabled ? "Type word to sign/speak..." : "Type 'hello', 'laugh', 'cheer'..."}
-                    disabled={isThinking}
-                    style={{ width: '100%' }}
-                  />
-                  <button type="submit" className="chat-send-btn" disabled={isThinking || !chatInput.trim()}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                  </button>
-                </form>
-              </div>
-            </div>
+            <p className="landing-desc">
+              By running this entire orchestration client-side, AURA eliminates server-side graphics rendering and minimizes interaction delay. The system dynamically translates incoming dialogue into appropriate non-verbal gestures, synchronizes lip blendshapes with the generated audio, and triggers responsive movements to build a seamless conversational connection.
+            </p>
           </div>
         </section>
 
-        {/* SECTION 8: APPLICATIONS OF HMI */}
+        {/* SECTION 8: FRAMEWORK ARCHITECTURE */}
         <section className="landing-section full-width">
           <div className="section-content full-width">
-            <span className="hero-tagline">Real-World Integration</span>
-            <h2 className="landing-subheading text-gradient-gold">Domain Adaptations</h2>
+            <span className="hero-tagline">MODULAR STACK</span>
+            <h2 className="landing-subheading text-gradient-gold">Modular Human-Machine Interaction Architecture</h2>
             <p className="landing-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
-              From immersive research platforms to accessible kiosk systems, digital humans can adapt to multiple domains.
+              AURA is structured as an open, reusable framework rather than a closed application. Developers can extend, customize, or replace individual layers of the HMI stack to build context-specific digital human intelligence.
             </p>
 
             <div className="applications-grid">
               {[
-                { title: 'Interactive Education', desc: 'Enhancing student retention through friendly, conversational tutors capable of micro-expressions.', icon: '🎓' },
-                { title: 'Digital Reception', desc: 'Directing visitors in lobbies and virtual halls with low-latency facial analyses.', icon: '🛎️' },
-                { title: 'Accessibility & Inclusion', desc: 'Bridging sensory gaps via real-time spoken-to-sign language fingerspelling engines.', icon: '🤟' },
-                { title: 'Clinical & HMI Research', desc: 'Analyzing interaction signals, facial gaze compliance, and spatial coordination loops.', icon: '🔬' },
-                { title: 'Storytelling & Games', desc: 'Generating contextual scripts and real-time animation blends for games and narratives.', icon: '📚' }
+                { title: 'Physical Layer', desc: 'Manages 3D meshes, skeleton rigging, blendshapes, facial expressions, and upper-body kinetic gestures.' },
+                { title: 'Perception Layer', desc: 'Synthesizes real-time computer vision, user localization, gaze steering, active speaker detection, and audio capture.' },
+                { title: 'Intelligence Layer', desc: 'Executes large language reasoning, conversational state history, context memory, and preference learning.' },
+                { title: 'Social Layer', desc: 'Controls multi-person attention tracking, active speaker prioritization, gaze direction, and crowd engagement.' },
+                { title: 'Accessibility Layer', desc: 'Translates speech and text inputs into real-time sign language fingerspelling and hand movements.' }
               ].map((app, idx) => (
                 <div key={idx} className="application-card">
-                  <div className="app-card-visual" style={{ fontSize: '1.8rem' }}>{app.icon}</div>
                   <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 600, color: '#fff' }}>{app.title}</h3>
                   <p style={{ fontSize: '0.82rem', margin: 0, color: '#9ca3af', lineHeight: '1.5' }}>{app.desc}</p>
                 </div>
@@ -1229,21 +1282,21 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
           </div>
         </section>
 
-        {/* SECTION 9: RESEARCH & TECHNOLOGY */}
+        {/* SECTION 9: ENTERPRISE USE CASES */}
         <section className="landing-section full-width">
           <div className="section-content full-width">
-            <span className="hero-tagline">System Architecture</span>
-            <h2 className="landing-subheading text-gradient-cyan">Engineering the Interaction Layer</h2>
+            <span className="hero-tagline">REAL-WORLD INTEGRATION</span>
+            <h2 className="landing-subheading text-gradient-cyan">Domain Adaptation & Enterprise Profiles</h2>
             <p className="landing-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
-              An open architecture built on low-latency networks, MediaPipe tracking, and WebGL rendering.
+              From low-latency visitor kiosks to inclusive classroom assistants, AURA's modular layers adapt to distinct organizational roles and environments.
             </p>
 
             <div className="research-flow" style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {[
-                { title: 'Voice Input & VAD Filter', desc: 'Continuous voice capturing with ambient noise cancellation and sub-15ms energy boundary detection.', tech: 'VAD Engine' },
-                { title: 'Cognitive LLM Orchestrator', desc: 'Lexical parsing using FastAPI WebSockets to map sentiments, emotions, and visemes synchronously.', tech: 'Llama 3' },
-                { title: 'Kinematic & Motor Control', desc: 'Blending skeletal structures with custom Mixamo animation clips and real-time gaze steering.', tech: 'Mixamo Rig' },
-                { title: 'WebGL Render Pipeline', desc: 'R3F and Three.js-based rendering at 60fps, optimizing blendshapes to run smoothly on desktop and mobile browsers.', tech: 'Three.js / WebGL' }
+                { title: 'AI Receptionist & Guest Operations', desc: 'Greets visitors, handles complex lobby inquiries, collects visitor logs, and manages crowd queuing naturally.', tech: 'Frontdesk Kiosk' },
+                { title: 'AI Educator & Conversational Tutor', desc: 'Delivers personalized lessons using gestures and micro-expressions to gauge student focus and maximize retention.', tech: 'Online Learning' },
+                { title: 'Inclusive Public Services Assistant', desc: 'Bridges deaf communication barriers in hospitals, schools, and civic counters using live sign language translation.', tech: 'Civic Terminals' },
+                { title: 'Research & Interaction Platform', desc: 'Provides an open sandbox for clinical and cognitive scientists to analyze eye contact compliance and non-verbal cues.', tech: 'HMI Lab Suite' }
               ].map((node, idx) => (
                 <div key={idx} className="research-flow-node">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1260,10 +1313,10 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
         {/* SECTION 10: FINAL CALL TO ACTION */}
         <section className="landing-section full-width">
           <div className="section-content full-width">
-            <span className="hero-tagline">Get Started</span>
-            <h2 className="landing-subheading text-gradient-violet" style={{ fontSize: '2.5rem' }}>The Future of HMI is Human-Centric</h2>
+            <span className="hero-tagline">DEVELOPER & INVESTOR PORTAL</span>
+            <h2 className="landing-subheading text-gradient-violet" style={{ fontSize: '2.5rem' }}>Join the Next Wave of Human-Machine Interaction</h2>
             <p className="landing-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
-              Connect with engineers, check repository assets, or test our core HMI platform sandbox.
+              Explore the source repository, connect with business development architects, or test our developer calibrations panel.
             </p>
 
             <div className="landing-action-row" style={{ justifyContent: 'center', marginTop: '1rem' }}>
@@ -1275,7 +1328,7 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
               <div 
                 className="holographic-qr-card" 
                 style={{ borderColor: 'rgba(143, 148, 251, 0.25)' }} 
-                onClick={() => window.open('https://discord.gg', '_blank')}
+                onClick={() => window.open('https://discord.gg/8ZFcYhDNW', '_blank')}
               >
                 <div className="qr-scanner-box">
                   <div className="qr-scanner-beam" style={{ background: '#8f94fb', boxShadow: '0 0 10px #8f94fb' }}></div>
@@ -1290,9 +1343,8 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
                 <h4 className="qr-card-title">Discord Community</h4>
                 <span className="qr-card-tag" style={{ color: '#8f94fb', background: 'rgba(143, 148, 251, 0.08)', borderColor: 'rgba(143, 148, 251, 0.2)' }}>Join Chat</span>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.4, textAlign: 'center' }}>
-                  Scan to chat with researchers, developers, and HMI builders.
+                  Chat with researchers, developers, and HMI builders.
                 </p>
-                <div className="qr-card-action">Scan to Join →</div>
               </div>
 
               {/* Card 2: LinkedIn */}
@@ -1314,16 +1366,15 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
                 <h4 className="qr-card-title">LinkedIn Network</h4>
                 <span className="qr-card-tag" style={{ color: '#00f0ff', background: 'rgba(0, 240, 255, 0.08)', borderColor: 'rgba(0, 240, 255, 0.2)' }}>Connect</span>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.4, textAlign: 'center' }}>
-                  Scan to follow updates and sync with business architects.
+                  Follow updates and sync with business architects.
                 </p>
-                <div className="qr-card-action" style={{ color: '#00f0ff' }}>Scan to Follow →</div>
               </div>
 
               {/* Card 3: GitHub */}
               <div 
                 className="holographic-qr-card" 
                 style={{ borderColor: 'rgba(52, 211, 153, 0.25)' }} 
-                onClick={() => window.open('https://github.com', '_blank')}
+                onClick={() => window.open('https://github.com/Rohith57373/AURA', '_blank')}
               >
                 <div className="qr-scanner-box">
                   <div className="qr-scanner-beam" style={{ background: '#34d399', boxShadow: '0 0 10px #34d399' }}></div>
@@ -1338,9 +1389,8 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
                 <h4 className="qr-card-title">GitHub Repository</h4>
                 <span className="qr-card-tag" style={{ color: '#34d399', background: 'rgba(52, 211, 153, 0.08)', borderColor: 'rgba(52, 211, 153, 0.2)' }}>Source Code</span>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.4, textAlign: 'center' }}>
-                  Scan to explore repository assets and check developer releases.
+                  Explore repository assets and check developer releases.
                 </p>
-                <div className="qr-card-action" style={{ color: '#34d399' }}>Scan to Explore →</div>
               </div>
             </div>
           </div>
@@ -1355,16 +1405,16 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
             <span className="calibration-section-indicator" style={{ display: 'block', fontSize: '0.74rem', marginTop: '4px', color: 'var(--accent-primary)' }}>
               Section {activeSec}: {[
                 "Hero Stage",
-                "Future of HMI",
-                "Expressions & Emotions",
-                "Gestures & Body Language",
-                "Speech & Lipsync Loop",
-                "Gaze Awareness",
-                "Accessibility & Sign Language",
-                "Interactive Playground",
-                "Applications of HMI",
-                "Research & Architecture",
-                "Join HMI Network"
+                "Problem & Vision",
+                "The Emotion Engine",
+                "Core Capabilities",
+                "Pipeline Execution",
+                "Spatial Intelligence",
+                "Framework Architecture",
+                "Conversational Pipeline",
+                "Sign Language Accessibility",
+                "High-Performance WebGL Engine",
+                "Enterprise & Community Portal"
               ][activeSec]}
             </span>
           </h3>

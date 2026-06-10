@@ -1018,6 +1018,12 @@ export function Avatar({
             // Sharp step function for quick glances
             const glanceAngle = Math.sin(scanPhase) > 0.6 ? 0.35 : (Math.sin(scanPhase) < -0.6 ? -0.35 : 0);
             headLayer.engagement.yaw = THREE.MathUtils.lerp(headLayer.engagement.yaw, glanceAngle, 0.15);
+        } else if (currentGesture === 'nodding') {
+            // Procedural Nodding gesture
+            const nodFreq = 8.0;
+            const nodAmp = 0.08;
+            headLayer.engagement.pitch = Math.sin(time * nodFreq) * nodAmp - (nodAmp / 1.5);
+            headLayer.engagement.yaw = THREE.MathUtils.lerp(headLayer.engagement.yaw, 0, 0.1);
         } else if (isListening) {
             // USER REQUEST: Gentle nod loop instead of Mixamo animation
             const nodFreq = 3.5;
