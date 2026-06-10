@@ -1146,7 +1146,6 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
                 >
                   <div className="card-header-row">
                     <span className="card-title-text">{emo.name}</span>
-                    <span className="card-badge">{emo.capability}</span>
                   </div>
                   <p className="card-features-desc">{emo.features}</p>
                   <div className="card-meta-row">
@@ -1178,7 +1177,6 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
                 >
                   <div className="card-header-row">
                     <span className="gesture-card-title">{gest.title}</span>
-                    <span className="card-badge">{gest.asset}</span>
                   </div>
                   <p className="gesture-card-desc">{gest.desc}</p>
                   <div className="card-meta-row">
