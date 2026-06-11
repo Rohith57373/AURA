@@ -1349,7 +1349,7 @@ export default function LandingPage({ navigateTo, modelPath, setModelPath }) {
               <div 
                 className="holographic-qr-card" 
                 style={{ borderColor: 'rgba(0, 240, 255, 0.25)' }} 
-                onClick={() => window.open('https://linkedin.com', '_blank')}
+                onClick={() => window.open('https://www.linkedin.com/posts/rohith-r-8090a125a_aura-ritalumniassociation-humanmachineinteraction-activity-7470730841418174465-z3Jr?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD-6lUkBgJibWcvx9UM1ShtxGs__F6pHdx8', '_blank')}
               >
                 <div className="qr-scanner-box">
                   <div className="qr-scanner-beam" style={{ background: '#00f0ff', boxShadow: '0 0 10px #00f0ff' }}></div>
